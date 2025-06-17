@@ -1,0 +1,68 @@
+# loads in the new trips_per_day_2015.csv and weather_2015.csv files along with your saved model (from yesterday's .Rdata file), and predicts the number of trips for each day. If you used any other data for your model, make sure to include code that downloads and incorporates that data as well.
+
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(readr)
+```
+
+```{r load_data, include=FALSE}
+setwd('./week4')
+trips_per_day <- read_tsv('trips_per_day_2015.tsv')
+head(trips_per_day)
+
+weather_2015 <- read_csv('./weather_2015.csv') 
+#weather$DATE <- ymd(weather$DATE)
+View(head(weather_2015))
+
+trips_per_day <-
+    inner_join(trips_per_day, weather_2015, by=c("ymd" = "DATE"))
+
+names(trips_per_day) <- tolower(names(trips_per_day))
+head(trips_per_day)
+trips_per_day <-
+    trips_per_day %>%
+
+    # devide tmax and tmin by 10
+    mutate(tmax=tmax/10, tmin=tmin/10) %>%
+
+     # mutate the data to add weekday and season
+    mutate(
+    weekday = wday(ymd, label = TRUE),
+    # Season based on month
+    season = case_when(
+      month(ymd) %in% 3:5 ~ "Spring",
+      month(ymd) %in% 6:8 ~ "Summer",
+      month(ymd) %in% 9:11 ~ "Fall",
+      month(ymd) %in% c(12, 1, 2) ~ "Winter"
+    ))
+
+   
+View(head(trips_per_day))
+
+```
+
+
+```{r load_model}
+my_model <- load("./predict_citibike.RData")
+my_model <- get(my_model)
+validate_test_prediction <- predict(my_model, trips_per_day)
+
+# Calculate RMSE
+rmse <- sqrt(mean((validate_test_prediction - trips_per_day$num_trips)^2))
+summary(my_model)
+
+rmse
+```
+
+10 percent testing data from 2014:
+rmse
+[1] 3968.397
+r_squared
+[1] 0.8235913
+
+
+2015 test data:
+rmse: 8039.796
+r_squared: 0.8873
+
